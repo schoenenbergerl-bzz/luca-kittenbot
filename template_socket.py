@@ -92,7 +92,7 @@ def send_request(action):
     :param action:
     :return:
     """
-    global port_final
+    global final_port
     sel = selectors.DefaultSelector()
     request = create_request(action)
     start_connection(sel, HOST, PORT, create_request(action))
@@ -105,7 +105,7 @@ def send_request(action):
                 try:
                     message.process_events(mask)
                     port_new = str(message.response)
-                    port_final = port_new[2:-1]
+                    final_port = port_new[2:-1]
                 except Exception:
                     print(
                         f'Main: Error: Exception for {message.ipaddr}:\n'
@@ -118,7 +118,7 @@ def send_request(action):
         print('Caught keyboard interrupt, exiting')
     finally:
         sel.close()
-    return port_final
+    return final_port
 
 
 def create_request(action_item):
