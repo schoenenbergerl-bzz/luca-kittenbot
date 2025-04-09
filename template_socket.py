@@ -104,7 +104,6 @@ def send_request(action):
                 try:
                     message.process_events(mask)
                     if message.response is not None:
-                        # Assuming the response contains just the port number
                         return_port = message.response
                 except Exception:
                     print(
