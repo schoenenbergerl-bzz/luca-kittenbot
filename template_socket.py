@@ -1,6 +1,6 @@
 """ Implements a simple discovery service that listens for incoming connections """
 
-from bots.templatebot import TemplateBot
+from bots.lucabot import TemplateBot
 import selectors
 import socket
 import traceback
