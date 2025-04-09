@@ -6,7 +6,7 @@ from card import Card, CardType
 from game_handling.game_state import GameState
 
 
-class SmartBot(Bot):
+class LucaBot(Bot):
     def __init__(self, name=None, **kwargs):
         super().__init__(name=name, **kwargs)
         self.future_cards = []
