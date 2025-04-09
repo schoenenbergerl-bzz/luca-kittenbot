@@ -1,6 +1,4 @@
-""" Implements a simple discovery service that listens for incoming connections """
-
-from bots.lucabot import TemplateBot
+from bots.templatebot import TemplateBot
 import selectors
 import socket
 import traceback
@@ -10,7 +8,6 @@ from services import Services
 
 HOST = '127.0.0.1'
 PORT = 65432
-
 
 def main():
     """
@@ -25,44 +22,46 @@ def main():
             'type': 'bot'}
 
     print(f'Registration service {item["type"]} {item["ip"]}')
-    port1 = int(send_request(item))
-    host1 = '127.0.0.1'
-
-    sel = selectors.DefaultSelector()
-    services = Services()
-
-    lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    lsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    lsock.bind((host1, port1))
-    lsock.listen()
-    print(f'Listening on {(port1, host1)}')
-    lsock.setblocking(False)
-    sel.register(lsock, selectors.EVENT_READ, data=None)
-
     try:
-        while True:
-            events = sel.select(timeout=None)
-            for key, mask in events:
-                if key.data is None:
-                    accept_wrapper(sel, key.fileobj)
-                else:
-                    message = key.data
-                    try:
-                        message.process_events(mask)
-                        process_action(message, services)
-                    except Exception:
-                        print(
-                            f'Main: Error: Exception for {message.ipaddr}:\n'
-                            f'{traceback.format_exc()}'
-                        )
-                        message._close()
-    except KeyboardInterrupt:
-        print('Caught keyboard interrupt, exiting')
-    finally:
-        sel.close()
+        port1 = int(send_request(item))  # Convert to int here
+        host1 = '127.0.0.1'
 
+        sel = selectors.DefaultSelector()
+        services = Services()
 
+        lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        lsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        lsock.bind((host1, port1))
+        lsock.listen()
+        print(f'Listening on {(port1, host1)}')
+        lsock.setblocking(False)
+        sel.register(lsock, selectors.EVENT_READ, data=None)
 
+        try:
+            while True:
+                events = sel.select(timeout=None)
+                for key, mask in events:
+                    if key.data is None:
+                        accept_wrapper(sel, key.fileobj)
+                    else:
+                        message = key.data
+                        try:
+                            message.process_events(mask)
+                            process_action(message, services)
+                        except Exception:
+                            print(
+                                f'Main: Error: Exception for {message.ipaddr}:\n'
+                                f'{traceback.format_exc()}'
+                            )
+                            message._close()
+        except KeyboardInterrupt:
+            print('Caught keyboard interrupt, exiting')
+        finally:
+            sel.close()
+            
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
 
 def process_action(message, services):
     """
@@ -74,7 +73,6 @@ def process_action(message, services):
         action = message.request['action']
         message.response = 'TODO Response from the method'
         message.set_selector_events_mask('w')
-
 
 def accept_wrapper(sel, sock):
     """
@@ -89,14 +87,15 @@ def accept_wrapper(sel, sock):
 def send_request(action):
     """
     sends a request to the server
-    :param action:
-    :return:
+    :param action: the action to send
+    :return: the port number received from server
     """
-    global final_port
     sel = selectors.DefaultSelector()
     request = create_request(action)
-    start_connection(sel, HOST, PORT, create_request(action))
-
+    start_connection(sel, HOST, PORT, request)
+    
+    return_port = None
+    
     try:
         while True:
             events = sel.select(timeout=1)
@@ -104,8 +103,9 @@ def send_request(action):
                 message = key.data
                 try:
                     message.process_events(mask)
-                    port_new = str(message.response)
-                    final_port = port_new[2:-1]
+                    if message.response is not None:
+                        # Assuming the response contains just the port number
+                        return_port = message.response
                 except Exception:
                     print(
                         f'Main: Error: Exception for {message.ipaddr}:\n'
@@ -118,8 +118,10 @@ def send_request(action):
         print('Caught keyboard interrupt, exiting')
     finally:
         sel.close()
-    return final_port
-
+    
+    if return_port is None:
+        raise ValueError("No port received from server")
+    return return_port
 
 def create_request(action_item):
     return dict(
@@ -127,7 +129,6 @@ def create_request(action_item):
         encoding='utf-8',
         content=action_item,
     )
-
 
 def start_connection(sel, host, port, request):
     addr = (host, port)
@@ -138,10 +139,6 @@ def start_connection(sel, host, port, request):
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     message = ClientMessage(sel, sock, addr, request)
     sel.register(sock, events, data=message)
-
-
-
-
 
 if __name__ == '__main__':
     main()
