@@ -26,7 +26,7 @@ def main():
 
     print(f'Registration service {item["type"]} {item["ip"]}')
     port1 = int(send_request(item))
-    host1 = '192.168.99.222'
+    host1 = '127.0.0.1'
 
     sel = selectors.DefaultSelector()
     services = Services()
